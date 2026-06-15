@@ -80,6 +80,37 @@ module fee_core_tb;
     endfunction
     
     // ===========================
+    // Helper function to generate pulse sample
+    // ===========================
+    function real generate_pulse_sample(int sample_index);
+        real sample_value;
+        real t_rise, t_fall;
+        real gauss_val, exp_val;
+        
+        t_rise = real'(sample_index) - 50.0;  // Gaussian centered at t=50
+        t_fall = real'(sample_index) - 100.0; // Exponential starts at t=100
+        
+        if (t_rise < 0.0) begin
+            // Before pulse
+            sample_value = real'(BASELINE_DC);
+        end else if (t_fall <= 0.0) begin
+            // Gaussian rise
+            gauss_val = gaussian(t_rise, 0.0, GAUSSIAN_SIGMA);
+            sample_value = real'(BASELINE_DC) + (real'(PULSE_HEIGHT) * gauss_val);
+        end else begin
+            // Exponential fall
+            exp_val = exponential(t_fall, EXPONENTIAL_TAU);
+            sample_value = real'(BASELINE_DC) + (real'(PULSE_HEIGHT) * exp_val);
+        end
+        
+        // Clamp to valid range
+        if (sample_value < 0.0) sample_value = 0.0;
+        if (sample_value >= real'(2**DATA_WIDTH)) sample_value = real'(2**DATA_WIDTH - 1);
+        
+        return sample_value;
+    endfunction
+    
+    // ===========================
     // Test stimulus
     // ===========================
     
@@ -171,27 +202,7 @@ module fee_core_tb;
             @(posedge clk);
             sample_valid <= 1;
             
-            real sample_value;
-            real t_rise = real'(i) - 50.0;  // Gaussian centered at t=50
-            real t_fall = real'(i) - 100.0; // Exponential starts at t=100
-            
-            if (t_rise < 0.0) begin
-                // Before pulse
-                sample_value = BASELINE_DC;
-            end else if (t_fall <= 0.0) begin
-                // Gaussian rise
-                real gauss = gaussian(t_rise, 0.0, GAUSSIAN_SIGMA);
-                sample_value = BASELINE_DC + (PULSE_HEIGHT * gauss);
-            end else begin
-                // Exponential fall
-                real exp_decay = exponential(t_fall, EXPONENTIAL_TAU);
-                sample_value = BASELINE_DC + (PULSE_HEIGHT * exp_decay);
-            end
-            
-            // Clamp to valid range
-            if (sample_value < 0) sample_value = 0;
-            if (sample_value >= (2**DATA_WIDTH)) sample_value = (2**DATA_WIDTH) - 1;
-            
+            real sample_value = generate_pulse_sample(i);
             sample_in <= $rtoi(sample_value);
             
             // Logging
@@ -235,23 +246,7 @@ module fee_core_tb;
             @(posedge clk);
             sample_valid <= 1;
             
-            real sample_value;
-            real t_rise = real'(i) - 50.0;
-            real t_fall = real'(i) - 100.0;
-            
-            if (t_rise < 0.0) begin
-                sample_value = BASELINE_DC;
-            end else if (t_fall <= 0.0) begin
-                real gauss = gaussian(t_rise, 0.0, GAUSSIAN_SIGMA);
-                sample_value = BASELINE_DC + (PULSE_HEIGHT * gauss);
-            end else begin
-                real exp_decay = exponential(t_fall, EXPONENTIAL_TAU);
-                sample_value = BASELINE_DC + (PULSE_HEIGHT * exp_decay);
-            end
-            
-            if (sample_value < 0) sample_value = 0;
-            if (sample_value >= (2**DATA_WIDTH)) sample_value = (2**DATA_WIDTH) - 1;
-            
+            real sample_value = generate_pulse_sample(i);
             sample_in <= $rtoi(sample_value);
         end
         
