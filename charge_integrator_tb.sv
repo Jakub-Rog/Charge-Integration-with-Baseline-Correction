@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 module charge_integrator_tb;
 
-localparam DATA_WIDTH = 128;
+localparam DATA_WIDTH = 64;
 localparam CNT_WIDTH = 16;
 
 logic clk;
@@ -14,6 +14,7 @@ logic [CNT_WIDTH - 1 : 0] window_end;
 logic auto_mode;
 logic [DATA_WIDTH-1 : 0] charge;
 logic control;
+real result = 0.0;
 
 charge_integrator dut(
     .clk(clk),
@@ -58,9 +59,14 @@ initial begin
             i++;
         end
     end
-    
     $fclose(file_handle);
-    $display("Integrated charge=", charge);
+    wait(charge != 0);
+    @(posedge clk);
+    
+    result = $itor(charge) * 1e-18;
+
+    $display("charge = %d", charge);
+    $display("result = %e", result);
     repeat (30) @(posedge clk);
     $finish;
 end
