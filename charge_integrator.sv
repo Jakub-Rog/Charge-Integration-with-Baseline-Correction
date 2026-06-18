@@ -1,5 +1,5 @@
 module charge_integrator#(
-    parameter int DATA_WIDTH = 64,
+    parameter int DATA_WIDTH = 32,
     parameter int K = 12,
     parameter int CNT_WIDTH = 16
 )(
@@ -70,8 +70,7 @@ always_ff @(posedge clk) begin
             end
 
             if (counter == window_end) begin
-                scaled <= (acc * SCALE) >> 14;
-                charge <= scaled;
+                charge <= acc;
                 control <= 0;
                 state <= IDLE;
             end
