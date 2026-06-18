@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 module charge_integrator_tb;
 
-localparam DATA_WIDTH = 64;
+localparam DATA_WIDTH = 32;
 localparam CNT_WIDTH = 16;
 
 logic clk;
@@ -63,7 +63,7 @@ initial begin
     wait(charge != 0);
     @(posedge clk);
     
-    result = $itor(charge) * 1e-15;
+    result = $itor(charge/16384) * 0.022511 * 1e-6;
 
     $display("charge = %d", charge);
     $display("result = %e", result);
