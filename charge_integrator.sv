@@ -21,17 +21,6 @@ logic [DATA_WIDTH-1:0] baseline_comp = 0;
 longint SCALE = 22511000;
 logic [DATA_WIDTH-1:0] temp;
 
-dc_compensator #(
-    .DATA_WIDTH(DATA_WIDTH),
-    .K(K)
-)dc_compensator(
-    .clk(clk),
-    .rst(rst),
-    .sample_valid(auto_mode),
-    .sample_in(sample),
-    .sample_out(sample_comp),
-    .baseline_out(baseline_comp)
-);
 
 typedef enum logic [1:0]{
     IDLE,
@@ -41,40 +30,10 @@ typedef enum logic [1:0]{
 state_t state = IDLE;
 logic [CNT_WIDTH-1 : 0] counter = 0;
 
-//always_ff @(posedge clk) begin
-//    if(rst) begin
-//        charge <= 0;
-//        control <= 0;
-//    end else begin
-//        case(state)
-//            IDLE: 
-//            begin
-//                if(trigger) begin
-//                    charge <= 0;
-//                    control <= 1;
-//                    state <= INTEGRATE;
-//                    counter <= 0;
-//                end
-//            end
-//            INTEGRATE:
-//            begin
-//                if(counter >= window_start && counter < window_end) begin
-//                    if(auto_mode == 0)
-//                        charge <= charge + (sample - baseline);
-//                    else
-//                        charge <= ((charge + sample) * SCALE) >> 14;
-//                end if(counter >= window_end) begin
-//                    control <= 1;
-//                    state = IDLE;
-//                end
-//                counter <= counter + 1;
-//            end
-//        endcase
-//    end
-//end
-
 logic signed [127:0] acc;
 logic signed [127:0] scaled;
+logic signed [DATA_WIDTH+4:0] baseline_comp = 0;
+logic signed [DATA_WIDTH+4:0] diff = 0;
 
 always_ff @(posedge clk) begin
     if (rst) begin
@@ -83,6 +42,8 @@ always_ff @(posedge clk) begin
         counter <= 0;
         control <= 0;
         state <= IDLE;
+        baseline_comp <= 0;
+        diff <= 0;
     end else begin
         case(state)
 
@@ -97,12 +58,15 @@ always_ff @(posedge clk) begin
         end
 
         INTEGRATE: begin
-
+            diff <= sample - baseline_comp;
+            baseline_comp <= baseline_comp + (diff >>> K);
+            
             if (counter >= window_start && counter < window_end) begin
                 if (auto_mode == 0)
                     acc <= acc + (sample - baseline);
                 else
-                    acc <= acc + sample;
+                sample_comp <= sample - baseline_comp;
+                acc <= acc + sample_comp; 
             end
 
             if (counter == window_end) begin
