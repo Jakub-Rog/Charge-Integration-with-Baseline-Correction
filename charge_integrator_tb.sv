@@ -31,7 +31,7 @@ charge_integrator dut(
 
 int file_handle;
 int status;
-int values[0:1999];
+int values[0:7999];
 int i;
 
 initial clk = 0;
@@ -46,11 +46,11 @@ end
 initial begin
     @(negedge rst)
     trigger = 1;
-    window_start = 0;
-    window_end = 2000;
+    window_start = 5999;
+    window_end = 7999;
     auto_mode = 1;
     file_handle = $fopen("C:/Users/Jakub/OneDrive/Pulpit/PMT_signal.txt", "r");
-    while (i < 2000) begin
+    while (i < 8000) begin
         status = $fscanf(file_handle, "%d", values[i]);
 
         if (status == 1) begin
@@ -63,7 +63,7 @@ initial begin
     wait(charge != 0);
     @(posedge clk);
     
-    result = $itor(charge) * 1e-18;
+    result = $itor(charge) * 1e-15;
 
     $display("charge = %d", charge);
     $display("result = %e", result);
